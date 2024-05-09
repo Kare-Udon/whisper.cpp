@@ -593,6 +593,21 @@ extern "C" {
                            const float * samples,
                                    int   n_samples);
 
+    // Run the decode only: PCM -> log mel spectrogram -> encoder -> tensor
+    // Modified by Kare-Udon for Emotion Whisper usage
+    WHISPER_API int whisper_encode_only(
+                struct whisper_context * ctx,
+            struct whisper_full_params   params,
+                           const float * samples,
+                                   int   n_samples);
+
+    WHISPER_API int whisper_encode_only_with_state(
+                struct whisper_context * ctx,
+                  struct whisper_state * state,
+            struct whisper_full_params   params,
+                           const float * samples,
+                                   int   n_samples);
+
     // Split the input audio in chunks and process each chunk separately using whisper_full_with_state()
     // Result is stored in the default state of the context
     // Not thread safe if executed in parallel on the same context.

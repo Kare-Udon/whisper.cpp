@@ -6094,6 +6094,56 @@ int whisper_full(
     return whisper_full_with_state(ctx, ctx->state, params, samples, n_samples);
 }
 
+int whisper_decode_only_with_state(
+        struct whisper_context * ctx,
+          struct whisper_state * state,
+    struct whisper_full_params   params,
+                   const float * samples,
+                           int   n_samples) {
+
+    if (n_samples > 0) {
+        // compute log mel spectrogram
+        if (params.speed_up) {
+            // TODO: Replace PV with more advanced algorithm
+            WHISPER_LOG_ERROR("%s: failed to compute log mel spectrogram\n", __func__);
+            return -1;
+        } else {
+            if (whisper_pcm_to_mel_with_state(ctx, state, samples, n_samples, params.n_threads) != 0) {
+                WHISPER_LOG_ERROR("%s: failed to compute log mel spectrogram\n", __func__);
+                return -2;
+            }
+        }
+    }
+
+    // overwrite audio_ctx, max allowed is hparams.n_audio_ctx
+    if (params.audio_ctx > whisper_n_audio_ctx(ctx)) {
+        WHISPER_LOG_ERROR("%s: audio_ctx is larger than the maximum allowed (%d > %d)\n", __func__, params.audio_ctx, whisper_n_audio_ctx(ctx));
+        return -5;
+    }
+    state->exp_n_audio_ctx = params.audio_ctx;
+
+    if (params.encoder_begin_callback) {
+        if (params.encoder_begin_callback(ctx, state, params.encoder_begin_callback_user_data) == false) {
+            WHISPER_LOG_ERROR("%s: encoder_begin_callback returned false - aborting\n", __func__);
+        }
+    }
+
+    // encode audio features starting at offset seek
+    if (!whisper_encode_internal(*ctx, *state, 0, params.n_threads, params.abort_callback, params.abort_callback_user_data)) {
+        WHISPER_LOG_ERROR("%s: failed to encode\n", __func__);
+        return -6;
+    }
+}
+
+int whisper_decode_only(
+        struct whisper_context * ctx,
+    struct whisper_full_params   params,
+                   const float * samples,
+                           int   n_samples) {
+    return whisper_decode_only_with_state(ctx, ctx->state, params, samples, n_samples);
+}
+
+
 int whisper_full_parallel(
         struct whisper_context * ctx,
         struct whisper_full_params params,
